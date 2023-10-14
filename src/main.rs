@@ -12,52 +12,56 @@ fn main() {
         .add_plugins(PanOrbitCameraPlugin)
         .add_systems(Startup, setup_graphics)
         .add_systems(Startup, setup_physics)
-        .add_systems(Update, move_robot1)
+        .add_systems(Startup, spawn_robots)
+        .add_systems(Update, move_robot)
         .run();
 }
 
 #[derive(Component)]
-struct Robot1;
-#[derive(Component)]
-struct Robot2;
-#[derive(Component)]
-struct Robot3;
-#[derive(Component)]
-struct Robot4;
-#[derive(Component)]
-struct Robot5;
+struct Robot {
+    id: u16
+}
+
+fn spawn_robots(
+    mut commands: Commands,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+) {
+    for i in 0..12 {
+        commands
+            .spawn((
+                PbrBundle {
+                    mesh: meshes.add(
+                        shape::Cylinder {
+                            radius: ROB_R,
+                            height: ROB_H,
+                            resolution: 10,
+                            segments: 10,
+                        }
+                        .into(),
+                    ),
+                    material: materials.add(ROB_COL.into()),
+                    transform: Transform::from_xyz(ROB_START_POS[i][0], 0.0, ROB_START_POS[i][1]),
+                    ..default()
+                },
+                Robot{
+                    id: i as u16
+                },
+            ))
+            .insert(RigidBody::Dynamic)
+            .insert(Collider::cylinder(ROB_H / 2.0, ROB_R))
+            .insert(Restitution::coefficient(REST_COEF))
+            .insert(TransformBundle::from(Transform::from_xyz(ROB_START_POS[i][0], 0.0, ROB_START_POS[i][1])));
+    }
+}
 
 fn setup_physics(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
-    let restitution = Restitution::coefficient(RESTITUTION_COEFFICIENT);
-
-    // robot 1 (cilinder)
-    commands
-        .spawn((
-            PbrBundle {
-                mesh: meshes.add(
-                    shape::Cylinder {
-                        radius: ROBOT_RADIUS,
-                        height: ROBOT_HEIGHT,
-                        resolution: 10,
-                        segments: 10,
-                    }
-                    .into(),
-                ),
-                material: materials.add(ROBOT_COLOR.into()),
-                transform: Transform::from_xyz(1.0, 0.0, 0.0),
-                ..default()
-            },
-            Robot1,
-        ))
-        .insert(RigidBody::Dynamic)
-        .insert(Collider::cylinder(ROBOT_HEIGHT / 2.0, ROBOT_RADIUS))
-        .insert(Restitution::coefficient(RESTITUTION_COEFFICIENT))
-        .insert(TransformBundle::from(Transform::from_xyz(1.0, 0.0, 0.0)));
-
+    let restitution = Restitution::coefficient(REST_COEF);
+    
     // ball
     commands
         .spawn(PbrBundle {
@@ -69,7 +73,7 @@ fn setup_physics(
                 .try_into()
                 .unwrap(),
             ),
-            material: materials.add(BALL_COLOR.into()),
+            material: materials.add(BALL_COL.into()),
             ..default()
         })
         .insert(RigidBody::Dynamic)
@@ -84,14 +88,14 @@ fn setup_physics(
     commands
         .spawn(PbrBundle {
             mesh: meshes.add(Mesh::from(Mesh::from(shape::Box {
-                min_x: -TERRAIN_HALF_X,
-                max_x: TERRAIN_HALF_X,
+                min_x: -TERR_H_X,
+                max_x: TERR_H_X,
                 min_y: -0.1,
                 max_y: 0.1,
-                min_z: -TERRAIN_HALF_Z,
-                max_z: TERRAIN_HALF_Z,
+                min_z: -TERR_H_Z,
+                max_z: TERR_H_Z,
             }))),
-            material: materials.add(TERRAIN_COLOR.into()),
+            material: materials.add(TERR_COL.into()),
             ..default()
         })
         .insert(RigidBody::Fixed)
@@ -114,10 +118,12 @@ fn setup_physics(
     //     .insert(TransformBundle::from(Transform::from_xyz(0.0, -0.1, 0.0)));
 }
 
-fn move_robot1(
+fn move_robot(
     keyboard_input: Res<Input<KeyCode>>,
-    mut query: Query<&mut Transform, With<Robot1>>,
+    mut query: Query<&mut Transform, With<Robot>>,
 ) {
+    // get target speed (fw, sideways, turning)
+    // use forces to move robot
     for mut transform in query.iter_mut() {
         let mut direction = Vec3::ZERO;
         if keyboard_input.pressed(KeyCode::Up) {
