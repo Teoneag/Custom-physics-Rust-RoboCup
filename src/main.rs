@@ -25,10 +25,10 @@ struct Robot {
 // get target speed (fw, sideways, turning)
 fn move_robot(
     keyboard_input: Res<Input<KeyCode>>,
-    mut query: Query<&Robot>,
-    mut ext_forces: Query<&mut ExternalForce>,
+    mut query: Query<(&Robot, &mut ExternalForce)>,
+    // mut ext_forces: Query<&mut ExternalForce>,
 ) {
-    for robot in query.iter_mut() {
+    for (robot, mut ext_force) in query.iter_mut() {
         if robot.id != 5 {
             continue;
         }
@@ -46,10 +46,7 @@ fn move_robot(
         if keyboard_input.pressed(KeyCode::Right) {
             direction.x += 0.1;
         }
-        // transform.translation += direction * TIME_STEP;
-        for mut ext_force in ext_forces.iter_mut() {
-            ext_force.force = direction;
-        }
+        ext_force.force = direction;
     }
 }
 
@@ -86,7 +83,10 @@ fn spawn_robots(
                 0.0,
                 ROB_START_POS[i][1],
             )))
-            .insert(ExternalForce { force: Vec3::ZERO, ..Default::default() });
+            .insert(ExternalForce {
+                force: Vec3::ZERO,
+                ..Default::default()
+            });
     }
 }
 
@@ -140,7 +140,6 @@ fn setup_physics(
                                                                              //     coefficient: FRICTION_COEF,
                                                                              //     ..Default::default()
                                                                              // });
-
 }
 
 fn setup_graphics(mut commands: Commands, mut config: ResMut<GizmoConfig>) {
