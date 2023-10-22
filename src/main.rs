@@ -23,11 +23,7 @@ struct Robot {
 }
 
 // get target speed (fw, sideways, turning)
-fn move_robot(
-    keyboard_input: Res<Input<KeyCode>>,
-    mut query: Query<(&Robot, &mut ExternalForce)>,
-    // mut ext_forces: Query<&mut ExternalForce>,
-) {
+fn move_robot(keyboard_input: Res<Input<KeyCode>>, mut query: Query<(&Robot, &mut ExternalForce)>) {
     for (robot, mut ext_force) in query.iter_mut() {
         if robot.id != 5 {
             continue;
@@ -76,7 +72,6 @@ fn spawn_robots(
             ))
             .insert(RigidBody::Dynamic)
             .insert(Collider::cylinder(ROB_H / 2.0, ROB_R))
-            // .insert(Restitution::coefficient(REST_COEF))
             .insert(ColliderMassProperties::Density(1.0))
             .insert(TransformBundle::from(Transform::from_xyz(
                 ROB_START_POS[i][0],
@@ -84,7 +79,11 @@ fn spawn_robots(
                 ROB_START_POS[i][1],
             )))
             .insert(ExternalForce {
-                force: Vec3::ZERO,
+                ..Default::default()
+            })
+            .insert(Friction {
+                coefficient: FRICTION_COEF_ROB,
+                combine_rule: CoefficientCombineRule::Multiply,
                 ..Default::default()
             });
     }
@@ -113,12 +112,16 @@ fn setup_physics(
         })
         .insert(RigidBody::Dynamic)
         .insert(Collider::ball(BALL_RADIUS))
-        .insert(ColliderMassProperties::Density(1.0));
-    // .insert(restitution);
-    // .insert(Friction {
-    //     coefficient: FRICTION_COEF,
-    //     ..Default::default()
-    // });
+        .insert(ColliderMassProperties::Density(1.0))
+        .insert(Friction {
+            coefficient: FRICTION_COEF_BALL,
+            combine_rule: CoefficientCombineRule::Multiply,
+            ..Default::default()
+        })
+        .insert(Damping {
+            linear_damping: 0.5,
+            angular_damping: 0.5,
+        });
 
     // terain (box: 13.4 x 0.1 x 10.4)
     commands
@@ -136,10 +139,12 @@ fn setup_physics(
         })
         .insert(RigidBody::Fixed)
         .insert(Collider::cuboid(13.4 / 2.0, 0.1, 10.4 / 2.0))
-        .insert(TransformBundle::from(Transform::from_xyz(0.0, -0.1, 0.0))); // .insert(Friction {
-                                                                             //     coefficient: FRICTION_COEF,
-                                                                             //     ..Default::default()
-                                                                             // });
+        .insert(TransformBundle::from(Transform::from_xyz(0.0, -0.1, 0.0)))
+        .insert(Friction {
+            coefficient: FRICTION_COEF_TERR,
+            combine_rule: CoefficientCombineRule::Multiply,
+            ..Default::default()
+        });
 }
 
 fn setup_graphics(mut commands: Commands, mut config: ResMut<GizmoConfig>) {
