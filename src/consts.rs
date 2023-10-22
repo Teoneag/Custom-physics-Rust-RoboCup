@@ -18,6 +18,7 @@ pub const ROB_START_POS: [[f32; 2]; 12] = [
 ];
 
 pub const REST_COEF: f32 = 0.7;
+pub const FRICTION_COEF: f32 = 0.0;
 
 pub const TERR_H_X: f32 = 13.4 / 2.0; // 13.4 m
 pub const TERR_H_Z: f32 = 10.4 / 2.0; // 10.4 m

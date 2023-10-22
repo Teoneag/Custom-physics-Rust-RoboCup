@@ -22,6 +22,37 @@ struct Robot {
     id: u16,
 }
 
+// get target speed (fw, sideways, turning)
+fn move_robot(
+    keyboard_input: Res<Input<KeyCode>>,
+    mut query: Query<&Robot>,
+    mut ext_forces: Query<&mut ExternalForce>,
+) {
+    for robot in query.iter_mut() {
+        if robot.id != 5 {
+            continue;
+        }
+        let mut direction = Vec3::ZERO;
+
+        if keyboard_input.pressed(KeyCode::Up) {
+            direction.z -= 0.1;
+        }
+        if keyboard_input.pressed(KeyCode::Down) {
+            direction.z += 0.1;
+        }
+        if keyboard_input.pressed(KeyCode::Left) {
+            direction.x -= 0.1;
+        }
+        if keyboard_input.pressed(KeyCode::Right) {
+            direction.x += 0.1;
+        }
+        // transform.translation += direction * TIME_STEP;
+        for mut ext_force in ext_forces.iter_mut() {
+            ext_force.force = direction;
+        }
+    }
+}
+
 fn spawn_robots(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
@@ -40,20 +71,22 @@ fn spawn_robots(
                         }
                         .into(),
                     ),
-                    material: materials.add(ROB_COL.into()),
                     transform: Transform::from_xyz(ROB_START_POS[i][0], 0.0, ROB_START_POS[i][1]),
+                    material: materials.add(ROB_COL.into()),
                     ..default()
                 },
                 Robot { id: i as u16 },
             ))
             .insert(RigidBody::Dynamic)
             .insert(Collider::cylinder(ROB_H / 2.0, ROB_R))
-            .insert(Restitution::coefficient(REST_COEF))
+            // .insert(Restitution::coefficient(REST_COEF))
+            .insert(ColliderMassProperties::Density(1.0))
             .insert(TransformBundle::from(Transform::from_xyz(
                 ROB_START_POS[i][0],
                 0.0,
                 ROB_START_POS[i][1],
-            )));
+            )))
+            .insert(ExternalForce { force: Vec3::ZERO, ..Default::default() });
     }
 }
 
@@ -62,7 +95,7 @@ fn setup_physics(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
-    let restitution = Restitution::coefficient(REST_COEF);
+    // let restitution = Restitution::coefficient(REST_COEF);
 
     // ball
     commands
@@ -80,11 +113,12 @@ fn setup_physics(
         })
         .insert(RigidBody::Dynamic)
         .insert(Collider::ball(BALL_RADIUS))
-        .insert(restitution)
-        .insert(Friction {
-            coefficient: 0.5,
-            ..Default::default()
-        });
+        .insert(ColliderMassProperties::Density(1.0));
+    // .insert(restitution);
+    // .insert(Friction {
+    //     coefficient: FRICTION_COEF,
+    //     ..Default::default()
+    // });
 
     // terain (box: 13.4 x 0.1 x 10.4)
     commands
@@ -102,47 +136,11 @@ fn setup_physics(
         })
         .insert(RigidBody::Fixed)
         .insert(Collider::cuboid(13.4 / 2.0, 0.1, 10.4 / 2.0))
-        .insert(TransformBundle::from(Transform::from_xyz(0.0, -0.1, 0.0)))
-        .insert(Friction {
-            coefficient: 0.5,
-            ..Default::default()
-        });
+        .insert(TransformBundle::from(Transform::from_xyz(0.0, -0.1, 0.0))); // .insert(Friction {
+                                                                             //     coefficient: FRICTION_COEF,
+                                                                             //     ..Default::default()
+                                                                             // });
 
-    // ground
-    // commands
-    //     .spawn(PbrBundle {
-    //         mesh: meshes.add(Mesh::from(shape::Plane::from_size(20.0))),
-    //         material: materials.add(Color::rgb(0.3, 0.5, 0.3).into()),
-    //         transform: Transform::from_xyz(0.0, -0.1, 0.0),
-    //         ..default()
-    //     })
-    //     .insert(Collider::cuboid(10.0, 0.1, 10.0))
-    //     .insert(TransformBundle::from(Transform::from_xyz(0.0, -0.1, 0.0)));
-}
-
-// get target speed (fw, sideways, turning)
-// use forces to move robot
-fn move_robot(keyboard_input: Res<Input<KeyCode>>, mut query: Query<(&mut Transform, &Robot)>) {
-    for (mut transform, robot) in query.iter_mut() {
-        if robot.id != 5 {
-            continue;
-        }
-        let mut direction = Vec3::ZERO;
-
-        if keyboard_input.pressed(KeyCode::Up) {
-            direction.z -= 1.0;
-        }
-        if keyboard_input.pressed(KeyCode::Down) {
-            direction.z += 1.0;
-        }
-        if keyboard_input.pressed(KeyCode::Left) {
-            direction.x -= 1.0;
-        }
-        if keyboard_input.pressed(KeyCode::Right) {
-            direction.x += 1.0;
-        }
-        transform.translation += direction * TIME_STEP;
-    }
 }
 
 fn setup_graphics(mut commands: Commands, mut config: ResMut<GizmoConfig>) {
