@@ -19,7 +19,7 @@ fn main() {
 
 #[derive(Component)]
 struct Robot {
-    id: u16
+    id: u16,
 }
 
 fn spawn_robots(
@@ -44,14 +44,16 @@ fn spawn_robots(
                     transform: Transform::from_xyz(ROB_START_POS[i][0], 0.0, ROB_START_POS[i][1]),
                     ..default()
                 },
-                Robot{
-                    id: i as u16
-                },
+                Robot { id: i as u16 },
             ))
             .insert(RigidBody::Dynamic)
             .insert(Collider::cylinder(ROB_H / 2.0, ROB_R))
             .insert(Restitution::coefficient(REST_COEF))
-            .insert(TransformBundle::from(Transform::from_xyz(ROB_START_POS[i][0], 0.0, ROB_START_POS[i][1])));
+            .insert(TransformBundle::from(Transform::from_xyz(
+                ROB_START_POS[i][0],
+                0.0,
+                ROB_START_POS[i][1],
+            )));
     }
 }
 
@@ -61,7 +63,7 @@ fn setup_physics(
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
     let restitution = Restitution::coefficient(REST_COEF);
-    
+
     // ball
     commands
         .spawn(PbrBundle {
@@ -118,14 +120,15 @@ fn setup_physics(
     //     .insert(TransformBundle::from(Transform::from_xyz(0.0, -0.1, 0.0)));
 }
 
-fn move_robot(
-    keyboard_input: Res<Input<KeyCode>>,
-    mut query: Query<&mut Transform, With<Robot>>,
-) {
-    // get target speed (fw, sideways, turning)
-    // use forces to move robot
-    for mut transform in query.iter_mut() {
+// get target speed (fw, sideways, turning)
+// use forces to move robot
+fn move_robot(keyboard_input: Res<Input<KeyCode>>, mut query: Query<(&mut Transform, &Robot)>) {
+    for (mut transform, robot) in query.iter_mut() {
+        if robot.id != 5 {
+            continue;
+        }
         let mut direction = Vec3::ZERO;
+
         if keyboard_input.pressed(KeyCode::Up) {
             direction.z -= 1.0;
         }
