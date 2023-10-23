@@ -26,12 +26,16 @@ struct Robot {
 }
 
 // get target speed (fw, sideways, turning)
-fn move_robot(keyboard_input: Res<Input<KeyCode>>, mut query: Query<(&Robot, &mut ExternalForce)>) {
-    for (robot, mut ext_force) in query.iter_mut() {
+fn move_robot(
+    keyboard_input: Res<Input<KeyCode>>,
+    mut query: Query<(&Robot, &mut ExternalForce, &Transform)>,
+) {
+    for (robot, mut ext_force, transform) in query.iter_mut() {
         if robot.id != 5 {
             continue;
         }
         let mut direction = Vec3::ZERO;
+        let mut torque = Vec3::ZERO;
 
         if keyboard_input.pressed(KeyCode::Up) {
             direction.z -= 0.1;
@@ -45,7 +49,14 @@ fn move_robot(keyboard_input: Res<Input<KeyCode>>, mut query: Query<(&Robot, &mu
         if keyboard_input.pressed(KeyCode::Right) {
             direction.x += 0.1;
         }
-        ext_force.force = direction;
+        if keyboard_input.pressed(KeyCode::A) {
+            torque.y += 0.003;
+        }
+        if keyboard_input.pressed(KeyCode::D) {
+            torque.y -= 0.003;
+        }
+        ext_force.force = transform.rotation.mul_vec3(direction);
+        ext_force.torque = torque;
     }
 }
 
@@ -55,7 +66,16 @@ fn spawn_robots(
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
     for i in 0..12 {
-        commands
+        // if i != 5 {
+        //     continue;
+        // }
+        let transform = TransformBundle::from(Transform::from_xyz(
+            ROB_START_POS[i][0],
+            0.0,
+            ROB_START_POS[i][1],
+        ));
+
+        let robot = commands
             .spawn((
                 PbrBundle {
                     mesh: meshes.add(
@@ -67,7 +87,6 @@ fn spawn_robots(
                         }
                         .into(),
                     ),
-                    transform: Transform::from_xyz(ROB_START_POS[i][0], 0.0, ROB_START_POS[i][1]),
                     material: materials.add(ROB_COL.into()),
                     ..default()
                 },
@@ -76,11 +95,6 @@ fn spawn_robots(
             .insert(RigidBody::Dynamic)
             .insert(Collider::cylinder(ROB_H / 2.0, ROB_R))
             .insert(ColliderMassProperties::Density(1.0))
-            .insert(TransformBundle::from(Transform::from_xyz(
-                ROB_START_POS[i][0],
-                0.0,
-                ROB_START_POS[i][1],
-            )))
             .insert(ExternalForce {
                 ..Default::default()
             })
@@ -88,7 +102,34 @@ fn spawn_robots(
                 coefficient: FRICTION_COEF_ROB,
                 combine_rule: CoefficientCombineRule::Multiply,
                 ..Default::default()
-            });
+            })
+            .insert(transform)
+            .id();
+
+        let joint = PrismaticJointBuilder::new(Vec3::X)
+            .local_anchor1(Vec3::new(
+                ROB_R / 2.0,
+                -ROB_H / 2.0 + SHOOTER_H_S + 2.0 * SHOOTER_POS_Y,
+                0.0,
+            )) // robot anchor
+            .local_anchor2(Vec3::new(-SHOOTER_H_S / 2.0, 0.0, 0.0)) // shoter anchor
+            .limits([0.0, ROB_R + SHOOTER_H_S + SHOOTER_RANGE]);
+
+        commands
+            .spawn(PbrBundle {
+                mesh: meshes.add(
+                    shape::Cube {
+                        size: 2.0 * SHOOTER_H_S,
+                    }
+                    .into(),
+                ),
+                material: materials.add(SHOOTER_COL.into()),
+                ..default()
+            })
+            .insert(RigidBody::Dynamic)
+            .insert(Collider::cuboid(SHOOTER_H_S, SHOOTER_H_S, SHOOTER_H_S))
+            .insert(transform)
+            .insert(ImpulseJoint::new(robot, joint));
     }
 }
 
