@@ -4,6 +4,9 @@ use bevy_rapier3d::prelude::*;
 mod consts;
 use consts::*;
 
+mod box_spawner;
+use box_spawner::*;
+
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
@@ -94,8 +97,6 @@ fn setup_physics(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
-    // let restitution = Restitution::coefficient(REST_COEF);
-
     // ball
     commands
         .spawn(PbrBundle {
@@ -124,27 +125,69 @@ fn setup_physics(
         });
 
     // terain (box: 13.4 x 0.1 x 10.4)
-    commands
-        .spawn(PbrBundle {
-            mesh: meshes.add(Mesh::from(Mesh::from(shape::Box {
-                min_x: -TERR_H_X,
-                max_x: TERR_H_X,
-                min_y: -0.1,
-                max_y: 0.1,
-                min_z: -TERR_H_Z,
-                max_z: TERR_H_Z,
-            }))),
-            material: materials.add(TERR_COL.into()),
-            ..default()
-        })
-        .insert(RigidBody::Fixed)
-        .insert(Collider::cuboid(13.4 / 2.0, 0.1, 10.4 / 2.0))
-        .insert(TransformBundle::from(Transform::from_xyz(0.0, -0.1, 0.0)))
-        .insert(Friction {
-            coefficient: FRICTION_COEF_TERR,
-            combine_rule: CoefficientCombineRule::Multiply,
-            ..Default::default()
-        });
+    spawn_box_1(
+        &mut commands,
+        &mut meshes,
+        &mut materials,
+        TERR_H_X,
+        0.1,
+        TERR_H_Z,
+        0.0,
+        -0.1,
+        0.0,
+    );
+
+    // Left wall
+    spawn_box_1(
+        &mut commands,
+        &mut meshes,
+        &mut materials,
+        WALL_H_X,
+        WALL_H_Y,
+        TERR_H_Z,
+        -(TERR_H_X + WALL_H_X),
+        0.1,
+        0.0,
+    );
+
+    // Right wall
+    spawn_box_1(
+        &mut commands,
+        &mut meshes,
+        &mut materials,
+        WALL_H_X,
+        WALL_H_Y,
+        TERR_H_Z,
+        TERR_H_X + WALL_H_X,
+        0.1,
+        0.0,
+    );
+
+    // Top wall
+    spawn_box_1(
+        &mut commands,
+        &mut meshes,
+        &mut materials,
+        TERR_H_X,
+        WALL_H_Y,
+        WALL_H_X,
+        0.0,
+        0.1,
+        TERR_H_Z + WALL_H_X,
+    );
+
+    // Bottom wall
+    spawn_box_1(
+        &mut commands,
+        &mut meshes,
+        &mut materials,
+        TERR_H_X,
+        WALL_H_Y,
+        WALL_H_X,
+        0.0,
+        0.1,
+        -(TERR_H_Z + WALL_H_X),
+    );
 }
 
 fn setup_graphics(mut commands: Commands, mut config: ResMut<GizmoConfig>) {

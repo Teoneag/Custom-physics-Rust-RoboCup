@@ -17,13 +17,16 @@ pub const ROB_START_POS: [[f32; 2]; 12] = [
     [TERR_H_X * 0.9, 0.0],                    // 12
 ];
 
-// pub const REST_COEF: f32 = 0.7;
+pub const REST_COEF: f32 = 0.7;
 pub const FRICTION_COEF_TERR: f32 = 1.0;
 pub const FRICTION_COEF_BALL: f32 = 1.0;
 pub const FRICTION_COEF_ROB: f32 = 0.5;
 
 pub const TERR_H_X: f32 = 13.4 / 2.0; // 13.4 m
 pub const TERR_H_Z: f32 = 10.4 / 2.0; // 10.4 m
+
+pub const WALL_H_Y: f32 = 1.0; // 100 cm
+pub const WALL_H_X: f32 = 0.1; // 10 cm
 
 pub const BALL_RADIUS: f32 = 0.04267 / 2.0; // 42.67 mm diameter
 
